@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "push": "clasp push",
+    "open": "clasp open",
     "deploy": "npm run build && clasp push"
   },
   "keywords": [
