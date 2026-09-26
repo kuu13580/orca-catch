@@ -60,20 +60,14 @@ export class SpendAggregatorService {
    */
   aggregateForDate(targetDateStr: string): AggregationResult {
     // Parse target date (local JST date)
-    const [yearStr, monthStr, dayStr] = targetDateStr.split('-');
-    const year = parseInt(yearStr, 10);
-    const month = parseInt(monthStr, 10) - 1;
-    const day = parseInt(dayStr, 10);
+    const [year, month, day] = targetDateStr.split('-').map(Number);
 
-    const targetDate = new Date(year, month, day);
-
-    // Gmail search query date boundaries
-    // Include 1 day before and 1 day after to safely cover timezone differences
-    const prevDate = new Date(year, month, day - 1);
-    const nextDate = new Date(year, month, day + 2);
+    // Gmail search query date boundaries (UTC-safe ±1 day window)
+    const prevDate = new Date(Date.UTC(year, month - 1, day - 1));
+    const nextDate = new Date(Date.UTC(year, month - 1, day + 2));
 
     const formatDateForQuery = (d: Date) =>
-      `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      `${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`;
 
     const searchQuery = this.registry.buildCombinedSearchQuery({
       afterDateStr: formatDateForQuery(prevDate),
@@ -89,12 +83,11 @@ export class SpendAggregatorService {
     for (const email of emails) {
       const { item, unparsed } = this.registry.dispatch(email);
       if (item) {
-        // Strict date check in JST (Asia/Tokyo)
-        if (this.isSameDayJST(item.date, targetDate)) {
+        if (this.isSameDayJST(item.date, targetDateStr)) {
           items.push(item);
         }
       } else if (unparsed) {
-        if (this.isSameDayJST(unparsed.date, targetDate)) {
+        if (this.isSameDayJST(unparsed.date, targetDateStr)) {
           unparsedEmails.push(unparsed);
         }
       }
@@ -130,12 +123,19 @@ export class SpendAggregatorService {
   }
 
   /**
-   * Helper to check if two dates fall on the same calendar day in JST
+   * Helper to check if a date falls on the target calendar day in JST (Asia/Tokyo)
    */
-  private isSameDayJST(date1: Date, date2: Date): boolean {
-    // Format to YYYY-MM-DD in Asia/Tokyo
-    const d1Str = date1.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' });
-    const d2Str = date2.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' });
-    return d1Str === d2Str;
+  private isSameDayJST(date: Date, targetDateStr: string): boolean {
+    const formatter = new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(date);
+    const y = parts.find((p) => p.type === 'year')?.value;
+    const m = parts.find((p) => p.type === 'month')?.value;
+    const d = parts.find((p) => p.type === 'day')?.value;
+    return `${y}-${m}-${d}` === targetDateStr;
   }
 }

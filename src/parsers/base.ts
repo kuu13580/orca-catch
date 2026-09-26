@@ -26,13 +26,24 @@ export function parseDateTime(rawDate: string | undefined, fallback: Date): Date
   );
   if (!m) return fallback;
 
-  const year = parseInt(m[1], 10);
-  const month = parseInt(m[2], 10) - 1;
-  const day = parseInt(m[3], 10);
-  const hour = m[4] ? parseInt(m[4], 10) : fallback.getHours();
-  const minute = m[5] ? parseInt(m[5], 10) : fallback.getMinutes();
+  const jstTimeFormatter = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const fallbackParts = jstTimeFormatter.formatToParts(fallback);
+  const fallbackHour = fallbackParts.find((p) => p.type === 'hour')?.value ?? '00';
+  const fallbackMinute = fallbackParts.find((p) => p.type === 'minute')?.value ?? '00';
 
-  return new Date(year, month, day, hour, minute);
+  const year = m[1];
+  const month = m[2].padStart(2, '0');
+  const day = m[3].padStart(2, '0');
+  const hour = m[4] ? m[4].padStart(2, '0') : fallbackHour;
+  const minute = m[5] ? m[5].padStart(2, '0') : fallbackMinute;
+
+  // Explicitly parse in Asia/Tokyo (JST, +09:00)
+  return new Date(`${year}-${month}-${day}T${hour}:${minute}:00+09:00`);
 }
 
 /**

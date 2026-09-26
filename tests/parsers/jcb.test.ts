@@ -36,8 +36,6 @@ describe('JcbCardParser', () => {
     expect(item?.cardName).toBe('JCBカード');
     expect(item?.amount).toBe(780);
     expect(item?.shop).toBe('セブンイレブン');
-    expect(item?.date.getFullYear()).toBe(2026);
-    expect(item?.date.getMonth()).toBe(8);
-    expect(item?.date.getDate()).toBe(27);
+    expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/9/27');
   });
 });

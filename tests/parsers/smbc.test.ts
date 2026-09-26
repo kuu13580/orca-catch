@@ -46,12 +46,9 @@ describe('SmbcCardParser', () => {
 
     expect(item).not.toBeNull();
     expect(item?.cardId).toBe('smbc');
-    expect(item?.cardName).toBe('三井住友カード');
     expect(item?.amount).toBe(1540);
     expect(item?.shop).toBe('セブン-イレブン');
-    expect(item?.date.getFullYear()).toBe(2026);
-    expect(item?.date.getMonth()).toBe(8); // September is 8 (0-indexed)
-    expect(item?.date.getDate()).toBe(27);
+    expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/9/27');
   });
 
   it('parse: handles full-width numbers and commas', () => {

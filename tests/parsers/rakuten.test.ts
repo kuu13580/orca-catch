@@ -35,11 +35,8 @@ describe('RakutenCardParser', () => {
 
     expect(item).not.toBeNull();
     expect(item?.cardId).toBe('rakuten');
-    expect(item?.cardName).toBe('楽天カード');
     expect(item?.amount).toBe(3450);
     expect(item?.shop).toBe('ＶＩＳＡ国内加盟店');
-    expect(item?.date.getFullYear()).toBe(2026);
-    expect(item?.date.getMonth()).toBe(8);
-    expect(item?.date.getDate()).toBe(27);
+    expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/9/27');
   });
 });

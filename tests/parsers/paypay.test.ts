@@ -36,8 +36,6 @@ describe('PayPayCardParser', () => {
     expect(item?.cardName).toBe('PayPayカード');
     expect(item?.amount).toBe(2180);
     expect(item?.shop).toBe('ウエルシア薬局');
-    expect(item?.date.getFullYear()).toBe(2026);
-    expect(item?.date.getMonth()).toBe(8);
-    expect(item?.date.getDate()).toBe(27);
+    expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/9/27');
   });
 });
