@@ -1,0 +1,43 @@
+name: "💳 新規カード対応リクエスト (Card Request)"
+description: "対応してほしいクレジットカード・決済サービスをリクエストします"
+labels: ["enhancement", "card-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        新しいクレジットカードや決済通知メールへの対応リクエストありがとうございます！
+        以下の情報を入力してください。**※個人情報（カード番号、お名前等）は必ずマスクしてください。**
+  - type: input
+    id: card_name
+    attributes:
+      label: "カード・決済サービス名"
+      placeholder: "例: エポスカード、Kyash、イオンカード"
+    validations:
+      required: true
+  - type: input
+    id: from_address
+    attributes:
+      label: "送信元メールアドレス (From)"
+      placeholder: "例: info@eposcard.co.jp"
+    validations:
+      required: true
+  - type: input
+    id: subject
+    attributes:
+      label: "メールの件名 (Subject)"
+      placeholder: "例: 【エポスカード】カード利用のお知らせ"
+    validations:
+      required: true
+  - type: textarea
+    id: email_body
+    attributes:
+      label: "通知メール本文サンプル"
+      description: "※カード番号の下4桁、氏名、住所等の個人情報は必ず `XXXX` 等に書き換えてください。"
+      placeholder: |
+        エポスカードをご利用いただきありがとうございます。
+
+        ■利用日時：2026/09/27 12:34
+        ■利用場所：スターバックス
+        ■利用金額：650円
+    validations:
+      required: true

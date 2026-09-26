@@ -1,0 +1,5 @@
+# Ignore all source, config, and node modules
+**/**
+!Code.js
+!appsscript.json
+!*.html

@@ -1,0 +1,30 @@
+name: "🐛 不具合・パース失敗報告 (Bug Report)"
+description: "メールが読み取れなかった場合や動作の不具合を報告します"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        不具合のご報告ありがとうございます。
+        カード会社によるメール文面変更等でパースできなかった場合もこちらからご報告ください。
+  - type: input
+    id: card_name
+    attributes:
+      label: "対象カード名"
+      placeholder: "例: 三井住友カード、楽天カード"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: "不具合の詳細・画面上の警告内容"
+      placeholder: "画面上に『読み取れなかった通知メールが1件あります』と表示された 等"
+    validations:
+      required: true
+  - type: textarea
+    id: email_body
+    attributes:
+      label: "読み取れなかったメール本文（個人情報をマスクしたもの）"
+      description: "※個人情報は必ず伏せてください。"
+    validations:
+      required: false

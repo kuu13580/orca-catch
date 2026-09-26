@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Clasp / Credentials
+.clasprc.json
+.clasp.json
+
+# Environment / Local
+.env
+.env.local
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

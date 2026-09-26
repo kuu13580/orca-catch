@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>orca-catch</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --card-border-subtle: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-surface: #e0f2fe;
+      --nav-active-bg: #0f172a;
+      --nav-active-text: #ffffff;
+      --warning: #b45309;
+      --warning-bg: #fffbeb;
+      --warning-border: #fde68a;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 16px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 2px;
+    }
+
+    .logo {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
+
+    .logo svg {
+      color: var(--primary);
+    }
+
+    .refresh-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s;
+    }
+
+    .refresh-btn:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+
+    .refresh-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Date Navigation */
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .date-btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .date-btn.active {
+      background: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .date-picker-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .date-picker-input {
+      background: transparent;
+      border: none;
+      color: transparent;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      position: absolute;
+      opacity: 0;
+      z-index: 2;
+    }
+
+    .date-picker-icon-btn {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-muted);
+      pointer-events: none;
+      transition: background 0.15s;
+    }
+
+    .date-picker-wrap:hover .date-picker-icon-btn {
+      background: var(--card-bg);
+      color: var(--text-main);
+    }
+
+    /* Main Spend Card */
+    .spend-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+    }
+
+    .spend-target-date {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .spend-amount-wrap {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 4px;
+      margin: 8px 0 16px 0;
+    }
+
+    .currency-symbol {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .spend-amount {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text-main);
+      line-height: 1;
+    }
+
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 7px 16px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .copy-btn:active {
+      transform: scale(0.96);
+    }
+
+    /* Subtotals Grid */
+    .subtotals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .subtotal-chip {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .subtotal-card-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .subtotal-card-amount {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .subtotal-card-count {
+      font-size: 0.7rem;
+      color: var(--text-light);
+    }
+
+    /* Warning Banner */
+    .warning-banner {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .warning-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--warning);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .warning-details {
+      display: none;
+      font-size: 0.75rem;
+      color: #78350f;
+      border-top: 1px dashed var(--warning-border);
+      padding-top: 8px;
+    }
+
+    .warning-details.show {
+      display: block;
+    }
+
+    .warning-item {
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    /* Spend Items List */
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2px;
+    }
+
+    .item-count-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--card-bg);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .spend-item-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .spend-item-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .spend-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-badge {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--primary-surface);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .spend-item-time {
+      font-size: 0.75rem;
+      color: var(--text-light);
+    }
+
+    .spend-item-shop {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 240px;
+    }
+
+    .spend-item-right {
+      text-align: right;
+    }
+
+    .spend-item-amount {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Empty state */
+    .empty-state {
+      background: var(--card-bg);
+      border: 1px dashed var(--card-border);
+      border-radius: 14px;
+      padding: 36px 16px;
+      text-align: center;
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .empty-state svg {
+      color: var(--text-light);
+    }
+
+    .empty-state-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(248, 250, 252, 0.75);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #cbd5e1;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 500;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+      font-size: 0.8rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      transform: translateY(8px);
+      z-index: 200;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <img class="logo-icon" src="data:image/png;base64,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" alt="orca-catch logo">
+        <span>orca-catch</span>
+      </div>
+      <button class="refresh-btn" id="refreshBtn" onclick="fetchData(currentDateStr)">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+        </svg>
+        <span>更新</span>
+      </button>
+    </header>
+
+    <!-- Date Navigation -->
+    <div class="date-nav">
+      <button class="date-btn active" id="btnToday" onclick="selectQuickDate('today')">今日</button>
+      <button class="date-btn" id="btnYesterday" onclick="selectQuickDate('yesterday')">昨日</button>
+      <div class="date-picker-wrap">
+        <input type="date" id="datePicker" class="date-picker-input" onchange="onCustomDateSelect(this.value)">
+        <div class="date-picker-icon-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Spend Card -->
+    <div class="spend-card">
+      <div class="spend-target-date" id="targetDateDisplay">読み込み中...</div>
+      <div class="spend-amount-wrap">
+        <span class="currency-symbol">¥</span>
+        <span class="spend-amount" id="totalAmountDisplay">0</span>
+      </div>
+      <button class="copy-btn" id="copyBtn" onclick="copyAmount()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+        </svg>
+        <span>金額をコピー</span>
+      </button>
+    </div>
+
+    <!-- Subtotals Section -->
+    <div class="subtotals-grid" id="subtotalsGrid"></div>
+
+    <!-- Warning Banner for Unparsed Emails -->
+    <div class="warning-banner" id="warningBanner" style="display: none;">
+      <div class="warning-header" onclick="toggleWarningDetails()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+        </svg>
+        <span id="warningTitle">読み取れなかった通知メールがあります</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+      <div class="warning-details" id="warningDetails"></div>
+    </div>
+
+    <!-- Spend Items List -->
+    <div class="section-title">
+      <span>利用明細</span>
+      <span class="item-count-badge" id="itemCountBadge">0件</span>
+    </div>
+
+    <div class="item-list" id="itemList"></div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div style="font-size: 0.85rem; font-weight: 500; color: #475569;">集計中...</div>
+  </div>
+
+  <!-- Copy Toast -->
+  <div class="toast" id="toast">金額をクリップボードにコピーしました</div>
+
+  <script>
+    let currentDateStr = '';
+    let currentTotalAmount = 0;
+
+    function getJSTDateStr(offsetDays = 0) {
+      const d = new Date();
+      if (offsetDays !== 0) {
+        d.setDate(d.getDate() + offsetDays);
+      }
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function selectQuickDate(type) {
+      const todayStr = getJSTDateStr(0);
+      const yesterdayStr = getJSTDateStr(-1);
+
+      document.getElementById('btnToday').classList.remove('active');
+      document.getElementById('btnYesterday').classList.remove('active');
+
+      if (type === 'today') {
+        document.getElementById('btnToday').classList.add('active');
+        fetchData(todayStr);
+      } else if (type === 'yesterday') {
+        document.getElementById('btnYesterday').classList.add('active');
+        fetchData(yesterdayStr);
+      }
+    }
+
+    function onCustomDateSelect(dateVal) {
+      if (!dateVal) return;
+      document.getElementById('btnToday').classList.remove('active');
+      document.getElementById('btnYesterday').classList.remove('active');
+      fetchData(dateVal);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+
+    function toggleWarningDetails() {
+      const el = document.getElementById('warningDetails');
+      el.classList.toggle('show');
+    }
+
+    function copyAmount() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(String(currentTotalAmount)).then(() => {
+          showToast('金額 (' + currentTotalAmount.toLocaleString() + '円) をコピーしました');
+        });
+      } else {
+        showToast('コピーに失敗しました');
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    function fetchData(dateStr) {
+      currentDateStr = dateStr;
+      showLoading(true);
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(onDataLoaded)
+          .withFailureHandler(onError)
+          .getSpendData(dateStr);
+      } else {
+        // Mock data for local browser preview
+        setTimeout(() => {
+          onDataLoaded({
+            success: true,
+            targetDate: dateStr,
+            formattedTargetDate: dateStr + ' (テスト)',
+            totalAmount: 5840,
+            subtotals: [
+              { cardId: 'smbc', cardName: '三井住友カード', amount: 3500, count: 2 },
+              { cardId: 'rakuten', cardName: '楽天カード', amount: 2340, count: 1 }
+            ],
+            items: [
+              { id: '1', cardId: 'smbc', cardName: '三井住友カード', amount: 2000, shop: 'セブン-イレブン', timeStr: '19:40' },
+              { id: '2', cardId: 'rakuten', cardName: '楽天カード', amount: 2340, shop: 'スターバックス', timeStr: '14:20' },
+              { id: '3', cardId: 'smbc', cardName: '三井住友カード', amount: 1500, shop: 'スーパーライフ', timeStr: '11:15' }
+            ],
+            unparsedEmails: []
+          });
+        }, 300);
+      }
+    }
+
+    function onDataLoaded(res) {
+      showLoading(false);
+      if (!res.success) {
+        alert('取得エラー: ' + (res.error || '不明なエラー'));
+        return;
+      }
+
+      currentTotalAmount = res.totalAmount;
+      document.getElementById('targetDateDisplay').textContent = res.formattedTargetDate;
+      document.getElementById('totalAmountDisplay').textContent = res.totalAmount.toLocaleString();
+      document.getElementById('itemCountBadge').textContent = res.items.length + '件';
+
+      // Subtotals
+      const subtotalsGrid = document.getElementById('subtotalsGrid');
+      subtotalsGrid.innerHTML = '';
+      if (res.subtotals.length > 0) {
+        res.subtotals.forEach(sub => {
+          const chip = document.createElement('div');
+          chip.className = 'subtotal-chip';
+          chip.innerHTML = `
+            <div class="subtotal-card-name">${escapeHtml(sub.cardName)}</div>
+            <div class="subtotal-card-amount">¥${sub.amount.toLocaleString()}</div>
+            <div class="subtotal-card-count">${sub.count}件</div>
+          `;
+          subtotalsGrid.appendChild(chip);
+        });
+      }
+
+      // Warning banner
+      const warningBanner = document.getElementById('warningBanner');
+      const warningDetails = document.getElementById('warningDetails');
+      if (res.unparsedEmails && res.unparsedEmails.length > 0) {
+        warningBanner.style.display = 'flex';
+        document.getElementById('warningTitle').textContent = `読み取れなかった通知メールが ${res.unparsedEmails.length} 件あります`;
+        warningDetails.innerHTML = res.unparsedEmails.map(u => `
+          <div class="warning-item">
+            <strong>[${escapeHtml(u.timeStr)}] ${escapeHtml(u.subject)}</strong><br>
+            <span style="color: #b45309;">${escapeHtml(u.reason)} (${escapeHtml(u.from)})</span>
+          </div>
+        `).join('');
+      } else {
+        warningBanner.style.display = 'none';
+      }
+
+      // Item list
+      const itemList = document.getElementById('itemList');
+      itemList.innerHTML = '';
+      if (res.items.length === 0) {
+        itemList.innerHTML = `
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+            </svg>
+            <div class="empty-state-text">この日の決済通知メールはありませんでした</div>
+          </div>
+        `;
+      } else {
+        res.items.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'spend-item-card';
+          div.innerHTML = `
+            <div class="spend-item-left">
+              <div class="spend-item-meta">
+                <span class="card-badge">${escapeHtml(item.cardName)}</span>
+                <span class="spend-item-time">${escapeHtml(item.timeStr)}</span>
+              </div>
+              <div class="spend-item-shop">${escapeHtml(item.shop)}</div>
+            </div>
+            <div class="spend-item-right">
+              <div class="spend-item-amount">¥${item.amount.toLocaleString()}</div>
+            </div>
+          `;
+          itemList.appendChild(div);
+        });
+      }
+    }
+
+    function onError(err) {
+      showLoading(false);
+      alert('通信エラーが発生しました: ' + err);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      selectQuickDate('today');
+    });
+  </script>
+</body>
+</html>
