@@ -8,9 +8,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "push": "clasp push",
+    "push": "clasp push -f",
     "open": "clasp open",
-    "deploy": "npm run build && clasp push"
+    "deploy": "npm run build && clasp push -f"
   },
   "keywords": [
     "gas",

@@ -12,7 +12,7 @@ await esbuild.build({
   entryPoints: ['src/index.ts'],
   bundle: true,
   outfile: 'dist/Code.js',
-  target: 'es2022',
+  target: 'es2019',
   format: 'iife',
   logLevel: 'info',
 });
