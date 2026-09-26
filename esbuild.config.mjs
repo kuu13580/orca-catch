@@ -15,6 +15,26 @@ await esbuild.build({
   target: 'es2019',
   format: 'iife',
   logLevel: 'info',
+  footer: {
+    js: `
+// Top-level functions for Google Apps Script Editor & Web App entrypoints
+function doGet(e) {
+  return globalThis.doGet(e);
+}
+function doPost(e) {
+  return globalThis.doPost(e);
+}
+function getSpendData(targetDateStr) {
+  return globalThis.getSpendData(targetDateStr);
+}
+// Helper to easily trigger OAuth consent flow from script editor
+function authorize() {
+  console.log("Checking authorization...");
+  GmailApp.getInboxThreads(0, 1);
+  console.log("Authorization successful!");
+}
+`,
+  },
 });
 
 // 2. Copy appsscript.json to dist
