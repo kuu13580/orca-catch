@@ -395,6 +395,21 @@
       color: var(--text-main);
     }
 
+    .spend-item-card {
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.2s;
+    }
+
+    .spend-item-card.excluded {
+      opacity: 0.4;
+    }
+
+    .spend-item-card.excluded .spend-item-shop,
+    .spend-item-card.excluded .spend-item-amount {
+      text-decoration: line-through;
+    }
+
     /* Empty state */
     .empty-state {
       background: var(--card-bg);
@@ -538,7 +553,7 @@
 
     <!-- Spend Items List -->
     <div class="section-title">
-      <span>利用明細</span>
+      <span>利用明細 <small style="font-weight: normal; font-size: 0.72rem; color: var(--text-light); margin-left: 4px;">(タップで除外/復帰)</small></span>
       <span class="item-count-badge" id="itemCountBadge">0件</span>
     </div>
 
@@ -557,6 +572,8 @@
   <script>
     let currentDateStr = '';
     let currentTotalAmount = 0;
+    let currentItems = [];
+    const excludedItemIds = new Set();
 
     function getJSTDateStr(offsetDays = 0) {
       const d = new Date();
@@ -652,6 +669,92 @@
       }
     }
 
+    function updateSummary() {
+      const activeItems = currentItems.filter(item => !excludedItemIds.has(item.id));
+      const total = activeItems.reduce((sum, item) => sum + item.amount, 0);
+      currentTotalAmount = total;
+      document.getElementById('totalAmountDisplay').textContent = total.toLocaleString();
+
+      if (excludedItemIds.size > 0) {
+        document.getElementById('itemCountBadge').textContent = `${activeItems.length}/${currentItems.length}件`;
+      } else {
+        document.getElementById('itemCountBadge').textContent = `${currentItems.length}件`;
+      }
+
+      // Recalculate subtotals
+      const subtotalsMap = {};
+      currentItems.forEach(item => {
+        if (!subtotalsMap[item.cardId]) {
+          subtotalsMap[item.cardId] = { cardName: item.cardName, amount: 0, count: 0 };
+        }
+      });
+      activeItems.forEach(item => {
+        subtotalsMap[item.cardId].amount += item.amount;
+        subtotalsMap[item.cardId].count += 1;
+      });
+
+      const subtotalsGrid = document.getElementById('subtotalsGrid');
+      subtotalsGrid.innerHTML = '';
+      Object.values(subtotalsMap).forEach(sub => {
+        const chip = document.createElement('div');
+        chip.className = 'subtotal-chip';
+        chip.innerHTML = `
+          <div class="subtotal-card-name">${escapeHtml(sub.cardName)}</div>
+          <div class="subtotal-card-amount">¥${sub.amount.toLocaleString()}</div>
+          <div class="subtotal-card-count">${sub.count}件</div>
+        `;
+        subtotalsGrid.appendChild(chip);
+      });
+    }
+
+    function toggleItemExcluded(id) {
+      if (excludedItemIds.has(id)) {
+        excludedItemIds.delete(id);
+      } else {
+        excludedItemIds.add(id);
+      }
+      const el = document.getElementById('spend-item-' + id);
+      if (el) {
+        el.classList.toggle('excluded', excludedItemIds.has(id));
+      }
+      updateSummary();
+    }
+
+    function renderItems() {
+      const itemList = document.getElementById('itemList');
+      itemList.innerHTML = '';
+      if (currentItems.length === 0) {
+        itemList.innerHTML = `
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+            </svg>
+            <div class="empty-state-text">この日の決済通知メールはありませんでした</div>
+          </div>
+        `;
+      } else {
+        currentItems.forEach(item => {
+          const div = document.createElement('div');
+          div.id = 'spend-item-' + item.id;
+          div.className = 'spend-item-card' + (excludedItemIds.has(item.id) ? ' excluded' : '');
+          div.onclick = () => toggleItemExcluded(item.id);
+          div.innerHTML = `
+            <div class="spend-item-left">
+              <div class="spend-item-meta">
+                <span class="card-badge">${escapeHtml(item.cardName)}</span>
+                <span class="spend-item-time">${escapeHtml(item.timeStr)}</span>
+              </div>
+              <div class="spend-item-shop">${escapeHtml(item.shop)}</div>
+            </div>
+            <div class="spend-item-right">
+              <div class="spend-item-amount">¥${item.amount.toLocaleString()}</div>
+            </div>
+          `;
+          itemList.appendChild(div);
+        });
+      }
+    }
+
     function onDataLoaded(res) {
       showLoading(false);
       if (!res.success) {
@@ -659,26 +762,9 @@
         return;
       }
 
-      currentTotalAmount = res.totalAmount;
+      currentItems = res.items || [];
+      excludedItemIds.clear();
       document.getElementById('targetDateDisplay').textContent = res.formattedTargetDate;
-      document.getElementById('totalAmountDisplay').textContent = res.totalAmount.toLocaleString();
-      document.getElementById('itemCountBadge').textContent = res.items.length + '件';
-
-      // Subtotals
-      const subtotalsGrid = document.getElementById('subtotalsGrid');
-      subtotalsGrid.innerHTML = '';
-      if (res.subtotals.length > 0) {
-        res.subtotals.forEach(sub => {
-          const chip = document.createElement('div');
-          chip.className = 'subtotal-chip';
-          chip.innerHTML = `
-            <div class="subtotal-card-name">${escapeHtml(sub.cardName)}</div>
-            <div class="subtotal-card-amount">¥${sub.amount.toLocaleString()}</div>
-            <div class="subtotal-card-count">${sub.count}件</div>
-          `;
-          subtotalsGrid.appendChild(chip);
-        });
-      }
 
       // Warning banner
       const warningBanner = document.getElementById('warningBanner');
@@ -696,37 +782,8 @@
         warningBanner.style.display = 'none';
       }
 
-      // Item list
-      const itemList = document.getElementById('itemList');
-      itemList.innerHTML = '';
-      if (res.items.length === 0) {
-        itemList.innerHTML = `
-          <div class="empty-state">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
-            </svg>
-            <div class="empty-state-text">この日の決済通知メールはありませんでした</div>
-          </div>
-        `;
-      } else {
-        res.items.forEach(item => {
-          const div = document.createElement('div');
-          div.className = 'spend-item-card';
-          div.innerHTML = `
-            <div class="spend-item-left">
-              <div class="spend-item-meta">
-                <span class="card-badge">${escapeHtml(item.cardName)}</span>
-                <span class="spend-item-time">${escapeHtml(item.timeStr)}</span>
-              </div>
-              <div class="spend-item-shop">${escapeHtml(item.shop)}</div>
-            </div>
-            <div class="spend-item-right">
-              <div class="spend-item-amount">¥${item.amount.toLocaleString()}</div>
-            </div>
-          `;
-          itemList.appendChild(div);
-        });
-      }
+      renderItems();
+      updateSummary();
     }
 
     function onError(err) {
