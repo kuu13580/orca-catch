@@ -7,7 +7,7 @@ describe('SmbcCardParser', () => {
   it('canHandle: returns true for valid SMBC notification email', () => {
     const valid = parser.canHandle({
       id: 'msg-1',
-      subject: '【三井住友カード】ご利用のお知らせ',
+      subject: 'ご利用のお知らせ【三井住友カード】',
       from: 'mail.vpass.ne.jp',
       body: '...',
       date: new Date('2026-09-27T10:00:00Z'),
@@ -26,40 +26,40 @@ describe('SmbcCardParser', () => {
     expect(invalid).toBe(false);
   });
 
-  it('parse: extracts amount, shop, and datetime correctly', () => {
+  it('parse: handles real-world format with ◇ markers', () => {
     const body = `
 いつも三井住友カードをご利用いただきありがとうございます。
 
-◇利用日：2026/09/27 12:34
-◇利用先：セブン-イレブン
-◇利用金額：1,540円
-
-※本メールは決済完了時に送信されます。
+◇利用日：2026/09/27 09:17
+◇利用先：サンプルストア
+◇利用取引：買物
+◇利用金額：150円
 `;
     const item = parser.parse({
-      id: 'smbc-msg-1',
-      subject: '【三井住友カード】ご利用のお知らせ',
+      id: 'smbc-real-1',
+      subject: 'ご利用のお知らせ【三井住友カード】',
       from: 'vpass.ne.jp',
       body,
-      date: new Date('2026-09-27T12:35:00Z'),
+      date: new Date('2026-09-27T00:18:00Z'),
     });
 
     expect(item).not.toBeNull();
     expect(item?.cardId).toBe('smbc');
-    expect(item?.amount).toBe(1540);
-    expect(item?.shop).toBe('セブン-イレブン');
+    expect(item?.cardName).toBe('三井住友カード');
+    expect(item?.amount).toBe(150);
+    expect(item?.shop).toBe('サンプルストア');
     expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/9/27');
   });
 
   it('parse: handles full-width numbers and commas', () => {
     const body = `
 ◇利用日：2026/09/27
-◇利用先：スターバックスコーヒー
+◇利用先：サンプルカフェ
 ◇利用金額：２，５００円
 `;
     const item = parser.parse({
       id: 'smbc-msg-2',
-      subject: '【三井住友カード】ご利用のお知らせ',
+      subject: 'ご利用のお知らせ【三井住友カード】',
       from: 'vpass.ne.jp',
       body,
       date: new Date('2026-09-27T15:00:00Z'),
@@ -67,7 +67,7 @@ describe('SmbcCardParser', () => {
 
     expect(item).not.toBeNull();
     expect(item?.amount).toBe(2500);
-    expect(item?.shop).toBe('スターバックスコーヒー');
+    expect(item?.shop).toBe('サンプルカフェ');
   });
 
   it('parse: returns null when amount is missing', () => {
@@ -77,7 +77,7 @@ describe('SmbcCardParser', () => {
 `;
     const item = parser.parse({
       id: 'smbc-msg-3',
-      subject: '【三井住友カード】ご利用のお知らせ',
+      subject: 'ご利用のお知らせ【三井住友カード】',
       from: 'vpass.ne.jp',
       body,
       date: new Date('2026-09-27T10:00:00Z'),

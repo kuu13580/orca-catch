@@ -53,3 +53,44 @@ export function cleanShopName(raw: string | undefined): string {
   if (!raw) return '不明';
   return raw.replace(/[\r\n\t]+/g, ' ').trim() || '不明';
 }
+
+/**
+ * Extract spend amount flexibly from email body
+ */
+export function extractAmount(
+  body: string,
+  keywords: string[] = ['ご利用金額', '利用金額', '決済金額']
+): number | null {
+  const kw = keywords.join('|');
+  const regex = new RegExp(`(?:${kw})[^0-9\\r\\n]*?([0-9,０-９，]+)\\s*円`);
+  const match = body.match(regex);
+  if (!match) return null;
+  return parseAmount(match[1]);
+}
+
+/**
+ * Extract shop / merchant name flexibly from email body
+ */
+export function extractShop(
+  body: string,
+  keywords: string[] = ['ご利用先', '利用先', '利用加盟店', '加盟店']
+): string {
+  const kw = keywords.join('|');
+  const regex = new RegExp(`(?:${kw})[^：:\\r\\n]*?[：:\\s】　]+([^\\r\\n]+)`);
+  const match = body.match(regex);
+  return cleanShopName(match ? match[1] : undefined);
+}
+
+/**
+ * Extract datetime flexibly from email body
+ */
+export function extractDateTime(
+  body: string,
+  fallback: Date,
+  keywords: string[] = ['ご利用日時', '利用日時', 'ご利用日', '利用日']
+): Date {
+  const kw = keywords.join('|');
+  const regex = new RegExp(`(?:${kw})[^0-9\\r\\n]*?([0-9０-９]{4}[/\\-年][^\\r\\n]+)`);
+  const match = body.match(regex);
+  return parseDateTime(match ? match[1] : undefined, fallback);
+}

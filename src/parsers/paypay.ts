@@ -1,5 +1,5 @@
 import { CardParserStrategy, EmailMessage, SpendItem } from '../config/types';
-import { cleanShopName, parseAmount, parseDateTime } from './base';
+import { extractAmount, extractDateTime, extractShop } from './base';
 
 export class PayPayCardParser implements CardParserStrategy {
   readonly id = 'paypay';
@@ -17,20 +17,11 @@ export class PayPayCardParser implements CardParserStrategy {
   }
 
   parse(message: EmailMessage): SpendItem | null {
-    // Extract amount
-    const amountMatch = message.body.match(/(?:利用金額|ご利用金額)[：:\s]+([0-9,０-９，]+)\s*円/);
-    if (!amountMatch) return null;
-
-    const amount = parseAmount(amountMatch[1]);
+    const amount = extractAmount(message.body);
     if (!amount) return null;
 
-    // Extract shop name
-    const shopMatch = message.body.match(/(?:利用先|ご利用先)[：:\s]+([^\r\n]+)/);
-    const shop = cleanShopName(shopMatch ? shopMatch[1] : undefined);
-
-    // Extract date
-    const dateMatch = message.body.match(/(?:利用日時|ご利用日時|利用日)[：:\s]+([^\r\n]+)/);
-    const date = parseDateTime(dateMatch ? dateMatch[1] : undefined, message.date);
+    const shop = extractShop(message.body);
+    const date = extractDateTime(message.body, message.date);
 
     return {
       id: message.id,

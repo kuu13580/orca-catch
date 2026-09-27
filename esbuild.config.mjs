@@ -33,6 +33,17 @@ function authorize() {
   GmailApp.getInboxThreads(0, 1);
   console.log("Authorization successful!");
 }
+// Inspect email plain body - run from GAS editor with query in Logger
+function inspectEmail(query) {
+  if (!query) { console.log("Usage: set query in script, e.g. inspectEmail('from:example.com')"); return; }
+  var threads = GmailApp.search(query, 0, 1);
+  if (threads.length === 0) { console.log("No emails found for: " + query); return; }
+  var msg = threads[0].getMessages()[0];
+  console.log("=== Subject: " + msg.getSubject());
+  console.log("=== From: " + msg.getFrom());
+  console.log("=== PlainBody ===");
+  console.log(msg.getPlainBody());
+}
 `,
   },
 });
