@@ -70,6 +70,27 @@ describe('SmbcCardParser', () => {
     expect(item?.shop).toBe('サンプルカフェ');
   });
 
+  it('parse: handles JPY currency and decimal amounts', () => {
+    const body = `
+◇利用日：2026/10/02 04:57
+◇利用先：X CORP ADVERTISING
+◇利用取引：買物
+◇利用金額：1,520.00JPY
+`;
+    const item = parser.parse({
+      id: 'smbc-msg-jpy',
+      subject: 'ご利用のお知らせ【三井住友カード】',
+      from: 'vpass.ne.jp',
+      body,
+      date: new Date('2026-10-01T19:58:00Z'),
+    });
+
+    expect(item).not.toBeNull();
+    expect(item?.amount).toBe(1520);
+    expect(item?.shop).toBe('X CORP ADVERTISING');
+    expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/10/2');
+  });
+
   it('parse: returns null when amount is missing', () => {
     const body = `
 重要なお知らせ
