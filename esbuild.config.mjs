@@ -36,7 +36,7 @@ function authorize() {
 // Inspect email plain body - run from GAS editor with query in Logger
 function inspectEmail(query, limit) {
   if (!query) { console.log("Usage: set query in script, e.g. inspectEmail('from:example.com', 3)"); return; }
-  var maxCount = typeof limit === 'number' ? limit : 3;
+  var maxCount = (typeof limit === 'number' && Number.isInteger(limit) && limit >= 1) ? limit : 3;
   var threads = GmailApp.search(query, 0, maxCount);
   if (threads.length === 0) { console.log("No emails found for: " + query); return; }
 
