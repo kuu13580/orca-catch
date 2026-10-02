@@ -34,15 +34,27 @@ function authorize() {
   console.log("Authorization successful!");
 }
 // Inspect email plain body - run from GAS editor with query in Logger
-function inspectEmail(query) {
-  if (!query) { console.log("Usage: set query in script, e.g. inspectEmail('from:example.com')"); return; }
-  var threads = GmailApp.search(query, 0, 1);
+function inspectEmail(query, limit) {
+  if (!query) { console.log("Usage: set query in script, e.g. inspectEmail('from:example.com', 3)"); return; }
+  var maxCount = typeof limit === 'number' ? limit : 3;
+  var threads = GmailApp.search(query, 0, maxCount);
   if (threads.length === 0) { console.log("No emails found for: " + query); return; }
-  var msg = threads[0].getMessages()[0];
-  console.log("=== Subject: " + msg.getSubject());
-  console.log("=== From: " + msg.getFrom());
-  console.log("=== PlainBody ===");
-  console.log(msg.getPlainBody());
+
+  var count = 0;
+  for (var i = 0; i < threads.length; i++) {
+    var messages = threads[i].getMessages();
+    for (var j = 0; j < messages.length; j++) {
+      count++;
+      var msg = messages[j];
+      console.log("----------------------------------------");
+      console.log("[" + count + "] Subject: " + msg.getSubject());
+      console.log("    Date:    " + msg.getDate());
+      console.log("    From:    " + msg.getFrom());
+      console.log("=== PlainBody ===");
+      console.log(msg.getPlainBody());
+      if (count >= maxCount) return;
+    }
+  }
 }
 `,
   },

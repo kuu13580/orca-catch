@@ -3,14 +3,15 @@
  */
 export function parseAmount(raw: string): number | null {
   if (!raw) return null;
-  // Normalize full-width digits and commas to half-width
+  // Normalize full-width digits, commas, and dots to half-width
   const normalized = raw
     .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
     .replace(/，/g, ',')
+    .replace(/．/g, '.')
     .replace(/,/g, '')
     .trim();
 
-  const num = parseInt(normalized, 10);
+  const num = Math.round(parseFloat(normalized));
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
@@ -62,7 +63,7 @@ export function extractAmount(
   keywords: string[] = ['ご利用金額', '利用金額', '決済金額']
 ): number | null {
   const kw = keywords.join('|');
-  const regex = new RegExp(`(?:${kw})[^0-9\\r\\n]*?([0-9,０-９，]+)\\s*円`);
+  const regex = new RegExp(`(?:${kw})[^0-9\\r\\n]*?([0-9,０-９，]+(?:[.\\uff0e][0-9０-９]+)?)\\s*(?:円|JPY|jpy)`);
   const match = body.match(regex);
   if (!match) return null;
   return parseAmount(match[1]);
