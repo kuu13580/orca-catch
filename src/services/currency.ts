@@ -24,9 +24,16 @@ export const DEFAULT_FALLBACK_RATES: Record<string, number> = {
  * Exchange rate provider for Google Apps Script environment with script cache
  */
 export class GasExchangeRateProvider implements ExchangeRateProvider {
+  private memoryCache: Map<string, number> = new Map();
+
   getRateToJPY(currency: string): number {
     const upperCurrency = currency.toUpperCase();
     if (upperCurrency === 'JPY') return 1.0;
+
+    // Check in-memory cache first (for single aggregation run)
+    if (this.memoryCache.has(upperCurrency)) {
+      return this.memoryCache.get(upperCurrency)!;
+    }
 
     // Check GAS Script Cache if available
     let cache: GoogleAppsScript.Cache.Cache | null = null;
@@ -37,6 +44,7 @@ export class GasExchangeRateProvider implements ExchangeRateProvider {
         if (cachedRate) {
           const parsed = parseFloat(cachedRate);
           if (!Number.isNaN(parsed) && parsed > 0) {
+            this.memoryCache.set(upperCurrency, parsed);
             return parsed;
           }
         }
@@ -65,6 +73,7 @@ export class GasExchangeRateProvider implements ExchangeRateProvider {
                 console.warn('Cache write failed:', e);
               }
             }
+            this.memoryCache.set(upperCurrency, rate);
             return rate;
           }
         }
@@ -73,8 +82,17 @@ export class GasExchangeRateProvider implements ExchangeRateProvider {
       }
     }
 
-    // Fallback if network or API failed
-    return DEFAULT_FALLBACK_RATES[upperCurrency] ?? 150.0;
+    // Fallback if network or API failed (cache fallback for 5 mins to avoid repeated waits)
+    const fallbackRate = DEFAULT_FALLBACK_RATES[upperCurrency] ?? 150.0;
+    this.memoryCache.set(upperCurrency, fallbackRate);
+    if (cache) {
+      try {
+        cache.put(`fx_${upperCurrency}_JPY`, String(fallbackRate), 300);
+      } catch (e) {
+        console.warn('Cache fallback write failed:', e);
+      }
+    }
+    return fallbackRate;
   }
 }
 

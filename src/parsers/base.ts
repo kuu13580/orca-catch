@@ -72,6 +72,21 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   '¥': 'JPY',
 };
 
+const SUPPORTED_CURRENCIES = new Set([
+  'JPY',
+  'USD',
+  'EUR',
+  'GBP',
+  'AUD',
+  'CAD',
+  'CHF',
+  'CNY',
+  'KRW',
+  'SGD',
+  'TWD',
+  'HKD',
+]);
+
 export interface ExtractedAmount {
   amount: number;
   currency: string;
@@ -86,22 +101,37 @@ export function extractSpendAmount(
 ): ExtractedAmount | null {
   const kw = keywords.join('|');
   const regex = new RegExp(
-    `(?:${kw})[^0-9$€£¥￥＄\\r\\n]*?([$€£¥￥＄])?\\s*([0-9,０-９，]+(?:[.\\uff0e][0-9０-９]+)?)\\s*(円|JPY|USD|EUR|GBP|AUD|CAD|CHF|CNY|KRW|SGD|TWD|HKD)?`,
+    `(?:${kw})[^0-9$€£¥￥＄A-Za-z\\r\\n]*?([$€£¥￥＄]|[A-Za-z]{3})?\\s*([0-9,０-９，]+(?:[.\\uff0e][0-9０-９]+)?)\\s*([A-Za-z]{3}|円)?`,
     'i'
   );
   const match = body.match(regex);
   if (!match) return null;
 
-  const prefixSymbol = match[1];
+  const prefixUnit = match[1];
   const numStr = match[2];
   const suffixUnit = match[3];
 
   let currency = 'JPY';
   if (suffixUnit) {
     const s = suffixUnit.toUpperCase();
-    currency = s === '円' ? 'JPY' : s;
-  } else if (prefixSymbol) {
-    currency = CURRENCY_SYMBOLS[prefixSymbol] || 'JPY';
+    if (s === '円') {
+      currency = 'JPY';
+    } else if (SUPPORTED_CURRENCIES.has(s)) {
+      currency = s;
+    } else {
+      // Reject unrecognized foreign currency suffix to prevent misattributing to JPY
+      return null;
+    }
+  } else if (prefixUnit) {
+    const p = prefixUnit.toUpperCase();
+    if (CURRENCY_SYMBOLS[prefixUnit]) {
+      currency = CURRENCY_SYMBOLS[prefixUnit];
+    } else if (SUPPORTED_CURRENCIES.has(p)) {
+      currency = p;
+    } else {
+      // Reject unrecognized foreign currency prefix to prevent misattributing to JPY
+      return null;
+    }
   }
 
   const rawNum = parseRawAmount(numStr);
