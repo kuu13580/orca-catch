@@ -16,7 +16,10 @@ export interface SpendItem {
   id: string;
   cardId: string;
   cardName: string;
-  amount: number;
+  amount: number; // Always in JPY (converted if foreign currency)
+  originalAmount?: number; // Original amount in foreign currency (e.g. 11.51)
+  currency?: string; // Currency code (e.g. 'USD', 'JPY')
+  rate?: number; // Conversion rate to JPY applied
   shop: string;
   date: Date;
   rawSubject: string;

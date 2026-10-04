@@ -1,5 +1,5 @@
 import { CardParserStrategy, EmailMessage, SpendItem } from '../config/types';
-import { extractAmount, extractDateTime, extractShop } from './base';
+import { extractDateTime, extractShop, extractSpendAmount } from './base';
 
 export class JcbCardParser implements CardParserStrategy {
   readonly id = 'jcb';
@@ -17,8 +17,8 @@ export class JcbCardParser implements CardParserStrategy {
   }
 
   parse(message: EmailMessage): SpendItem | null {
-    const amount = extractAmount(message.body);
-    if (!amount) return null;
+    const parsedAmount = extractSpendAmount(message.body);
+    if (!parsedAmount) return null;
 
     const shop = extractShop(message.body);
     const date = extractDateTime(message.body, message.date);
@@ -27,10 +27,13 @@ export class JcbCardParser implements CardParserStrategy {
       id: message.id,
       cardId: this.id,
       cardName: this.cardName,
-      amount,
+      amount: parsedAmount.amount,
+      originalAmount: parsedAmount.currency !== 'JPY' ? parsedAmount.amount : undefined,
+      currency: parsedAmount.currency,
       shop,
       date,
       rawSubject: message.subject,
     };
   }
 }
+

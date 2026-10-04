@@ -1,7 +1,7 @@
 /**
- * Helper to normalize and parse amount strings (e.g. "1,234", "１，２３４") into number
+ * Helper to normalize and parse raw amount string into number (preserving decimals)
  */
-export function parseAmount(raw: string): number | null {
+export function parseRawAmount(raw: string): number | null {
   if (!raw) return null;
   // Normalize full-width digits, commas, and dots to half-width
   const normalized = raw
@@ -11,8 +11,16 @@ export function parseAmount(raw: string): number | null {
     .replace(/,/g, '')
     .trim();
 
-  const num = Math.round(parseFloat(normalized));
+  const num = parseFloat(normalized);
   return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+/**
+ * Helper to normalize and parse amount strings into integer number
+ */
+export function parseAmount(raw: string): number | null {
+  const num = parseRawAmount(raw);
+  return num !== null ? Math.round(num) : null;
 }
 
 /**
@@ -55,18 +63,66 @@ export function cleanShopName(raw: string | undefined): string {
   return raw.replace(/[\r\n\t]+/g, ' ').trim() || '不明';
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  $: 'USD',
+  '＄': 'USD',
+  '€': 'EUR',
+  '£': 'GBP',
+  '￥': 'JPY',
+  '¥': 'JPY',
+};
+
+export interface ExtractedAmount {
+  amount: number;
+  currency: string;
+}
+
 /**
- * Extract spend amount flexibly from email body
+ * Extract spend amount and currency code flexibly from email body
+ */
+export function extractSpendAmount(
+  body: string,
+  keywords: string[] = ['ご利用金額', '利用金額', '決済金額']
+): ExtractedAmount | null {
+  const kw = keywords.join('|');
+  const regex = new RegExp(
+    `(?:${kw})[^0-9$€£¥￥＄\\r\\n]*?([$€£¥￥＄])?\\s*([0-9,０-９，]+(?:[.\\uff0e][0-9０-９]+)?)\\s*(円|JPY|USD|EUR|GBP|AUD|CAD|CHF|CNY|KRW|SGD|TWD|HKD)?`,
+    'i'
+  );
+  const match = body.match(regex);
+  if (!match) return null;
+
+  const prefixSymbol = match[1];
+  const numStr = match[2];
+  const suffixUnit = match[3];
+
+  let currency = 'JPY';
+  if (suffixUnit) {
+    const s = suffixUnit.toUpperCase();
+    currency = s === '円' ? 'JPY' : s;
+  } else if (prefixSymbol) {
+    currency = CURRENCY_SYMBOLS[prefixSymbol] || 'JPY';
+  }
+
+  const rawNum = parseRawAmount(numStr);
+  if (rawNum === null) return null;
+
+  const amount = currency === 'JPY' ? Math.round(rawNum) : rawNum;
+  return {
+    amount,
+    currency,
+  };
+}
+
+/**
+ * Extract spend amount flexibly from email body (fallback helper)
  */
 export function extractAmount(
   body: string,
   keywords: string[] = ['ご利用金額', '利用金額', '決済金額']
 ): number | null {
-  const kw = keywords.join('|');
-  const regex = new RegExp(`(?:${kw})[^0-9\\r\\n]*?([0-9,０-９，]+(?:[.\\uff0e][0-9０-９]+)?)\\s*(?:円|JPY|jpy)`);
-  const match = body.match(regex);
-  if (!match) return null;
-  return parseAmount(match[1]);
+  const res = extractSpendAmount(body, keywords);
+  return res ? res.amount : null;
 }
 
 /**
