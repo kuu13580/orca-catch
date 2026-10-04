@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EmailMessage } from '../../src/config/types';
 import { createDefaultRegistry } from '../../src/parsers';
 import { EmailFetcher, SpendAggregatorService } from '../../src/services/aggregator';
+import { MockExchangeRateProvider } from '../../src/services/currency';
 
 class MockEmailFetcher implements EmailFetcher {
   constructor(private messages: EmailMessage[]) {}
@@ -95,4 +96,46 @@ describe('SpendAggregatorService', () => {
     expect(result.unparsedEmails[0].id).toBe('broken-smbc');
     expect(result.unparsedEmails[0].reason).toContain('三井住友カード');
   });
+
+  it('converts foreign currency items to JPY using exchange rate provider', () => {
+    const mockEmails: EmailMessage[] = [
+      {
+        id: 'smbc-usd',
+        subject: 'ご利用のお知らせ【三井住友カード】',
+        from: 'vpass.ne.jp',
+        body: '◇利用日：2026/10/04 15:30\n◇利用先：AWS EMEA\n◇利用金額：11.51 USD',
+        date: new Date('2026-10-04T06:30:00Z'), // 15:30 JST
+      },
+      {
+        id: 'smbc-jpy',
+        subject: 'ご利用のお知らせ【三井住友カード】',
+        from: 'vpass.ne.jp',
+        body: '◇利用日：2026/10/04 10:00\n◇利用先：コンビニ\n◇利用金額：500円',
+        date: new Date('2026-10-04T01:00:00Z'), // 10:00 JST
+      },
+    ];
+
+    const mockRates = new MockExchangeRateProvider({ USD: 150.0 });
+
+    const service = new SpendAggregatorService(
+      createDefaultRegistry(),
+      new MockEmailFetcher(mockEmails),
+      undefined,
+      mockRates
+    );
+
+    const result = service.aggregateForDate('2026-10-04');
+
+    expect(result.items).toHaveLength(2);
+    // 11.51 * 150 = 1726.5 -> round to 1727 JPY
+    const usdItem = result.items.find((i) => i.id === 'smbc-usd');
+    expect(usdItem?.currency).toBe('USD');
+    expect(usdItem?.originalAmount).toBe(11.51);
+    expect(usdItem?.rate).toBe(150.0);
+    expect(usdItem?.amount).toBe(1727);
+
+    // Total: 1727 + 500 = 2227
+    expect(result.totalAmount).toBe(2227);
+  });
 });
+

@@ -19,6 +19,9 @@ export interface ClientSpendResponse {
     cardId: string;
     cardName: string;
     amount: number;
+    originalAmount?: number;
+    currency?: string;
+    rate?: number;
     shop: string;
     timeStr: string;
   }>;
@@ -87,6 +90,9 @@ export function getSpendData(targetDateStr?: string): ClientSpendResponse {
         cardId: item.cardId,
         cardName: item.cardName,
         amount: item.amount,
+        originalAmount: item.originalAmount,
+        currency: item.currency,
+        rate: item.rate,
         shop: item.shop,
         timeStr,
       };

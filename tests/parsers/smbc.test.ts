@@ -91,6 +91,63 @@ describe('SmbcCardParser', () => {
     expect(item?.date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })).toBe('2026/10/2');
   });
 
+  it('parse: handles USD foreign currency amounts', () => {
+    const body = `
+◇利用日：2026/10/04 15:30
+◇利用先：AWS EMEA
+◇利用取引：買物
+◇利用金額：11.51 USD
+`;
+    const item = parser.parse({
+      id: 'smbc-msg-usd',
+      subject: 'ご利用のお知らせ【三井住友カード】',
+      from: 'vpass.ne.jp',
+      body,
+      date: new Date('2026-10-04T06:30:00Z'),
+    });
+
+    expect(item).not.toBeNull();
+    expect(item?.originalAmount).toBe(11.51);
+    expect(item?.currency).toBe('USD');
+    expect(item?.shop).toBe('AWS EMEA');
+  });
+
+  it('parse: handles prefix currency code (e.g. USD 11.51)', () => {
+    const body = `
+◇利用日：2026/10/04 15:30
+◇利用先：GITHUB INC
+◇利用金額：USD 11.51
+`;
+    const item = parser.parse({
+      id: 'smbc-msg-prefix-usd',
+      subject: 'ご利用のお知らせ【三井住友カード】',
+      from: 'vpass.ne.jp',
+      body,
+      date: new Date('2026-10-04T06:30:00Z'),
+    });
+
+    expect(item).not.toBeNull();
+    expect(item?.originalAmount).toBe(11.51);
+    expect(item?.currency).toBe('USD');
+  });
+
+  it('parse: rejects unrecognized foreign currency to avoid misattributing to JPY', () => {
+    const body = `
+◇利用日：2026/10/04 15:30
+◇利用先：NZ SHOP
+◇利用金額：11.51 NZD
+`;
+    const item = parser.parse({
+      id: 'smbc-msg-unrecognized-fx',
+      subject: 'ご利用のお知らせ【三井住友カード】',
+      from: 'vpass.ne.jp',
+      body,
+      date: new Date('2026-10-04T06:30:00Z'),
+    });
+
+    expect(item).toBeNull();
+  });
+
   it('parse: returns null when amount is missing', () => {
     const body = `
 重要なお知らせ

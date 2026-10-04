@@ -2,6 +2,7 @@ import { APP_CONFIG } from '../config/app';
 import { AggregationResult, AppConfig, EmailMessage, SpendItem, UnparsedEmail } from '../config/types';
 import { createDefaultRegistry } from '../parsers';
 import { ParserRegistry } from '../parsers/registry';
+import { ExchangeRateProvider, GasExchangeRateProvider } from './currency';
 
 export interface EmailFetcher {
   searchEmails(query: string): EmailMessage[];
@@ -44,15 +45,18 @@ export class SpendAggregatorService {
   private registry: ParserRegistry;
   private fetcher: EmailFetcher;
   private config: AppConfig;
+  private rateProvider: ExchangeRateProvider;
 
   constructor(
     registry: ParserRegistry = createDefaultRegistry(),
     fetcher: EmailFetcher = new GasEmailFetcher(),
-    config: AppConfig = APP_CONFIG
+    config: AppConfig = APP_CONFIG,
+    rateProvider: ExchangeRateProvider = new GasExchangeRateProvider()
   ) {
     this.registry = registry;
     this.fetcher = fetcher;
     this.config = config;
+    this.rateProvider = rateProvider;
   }
 
   /**
@@ -84,6 +88,12 @@ export class SpendAggregatorService {
       const { item, unparsed } = this.registry.dispatch(email);
       if (item) {
         if (this.isSameDayJST(item.date, targetDateStr)) {
+          // Convert foreign currency to JPY if needed
+          if (item.currency && item.currency !== 'JPY' && typeof item.originalAmount === 'number') {
+            const rate = this.rateProvider.getRateToJPY(item.currency);
+            item.rate = rate;
+            item.amount = Math.round(item.originalAmount * rate);
+          }
           items.push(item);
         }
       } else if (unparsed) {

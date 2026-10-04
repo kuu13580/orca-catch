@@ -406,8 +406,27 @@
     }
 
     .spend-item-card.excluded .spend-item-shop,
-    .spend-item-card.excluded .spend-item-amount {
+    .spend-item-card.excluded .spend-item-amount,
+    .spend-item-card.excluded .spend-item-original {
       text-decoration: line-through;
+    }
+
+    .spend-item-original {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    .fx-notice-banner {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--warning);
+      font-size: 0.75rem;
+      line-height: 1.4;
+      display: none;
     }
 
     /* Empty state */
@@ -557,6 +576,11 @@
       <span class="item-count-badge" id="itemCountBadge">0件</span>
     </div>
 
+    <!-- Foreign Currency Warning Notice -->
+    <div class="fx-notice-banner" id="fxNoticeBanner">
+      ※ 外貨決済は為替レート換算（概算）のため、カード会社の手数料や確定日レート等により実際の請求額と差異が生じる場合があります。
+    </div>
+
     <div class="item-list" id="itemList"></div>
   </div>
 
@@ -653,15 +677,16 @@
             success: true,
             targetDate: dateStr,
             formattedTargetDate: dateStr + ' (テスト)',
-            totalAmount: 5840,
+            totalAmount: 7567,
             subtotals: [
-              { cardId: 'smbc', cardName: '三井住友カード', amount: 3500, count: 2 },
+              { cardId: 'smbc', cardName: '三井住友カード', amount: 5227, count: 3 },
               { cardId: 'rakuten', cardName: '楽天カード', amount: 2340, count: 1 }
             ],
             items: [
               { id: '1', cardId: 'smbc', cardName: '三井住友カード', amount: 2000, shop: 'セブン-イレブン', timeStr: '19:40' },
               { id: '2', cardId: 'rakuten', cardName: '楽天カード', amount: 2340, shop: 'スターバックス', timeStr: '14:20' },
-              { id: '3', cardId: 'smbc', cardName: '三井住友カード', amount: 1500, shop: 'スーパーライフ', timeStr: '11:15' }
+              { id: '3', cardId: 'smbc', cardName: '三井住友カード', amount: 1500, shop: 'スーパーライフ', timeStr: '11:15' },
+              { id: '4', cardId: 'smbc', cardName: '三井住友カード', amount: 1727, originalAmount: 11.51, currency: 'USD', rate: 150.0, shop: 'X CORP ADVERTISING', timeStr: '04:57' }
             ],
             unparsedEmails: []
           });
@@ -723,6 +748,15 @@
     function renderItems() {
       const itemList = document.getElementById('itemList');
       itemList.innerHTML = '';
+
+      const hasForeignCurrency = currentItems.some(
+        item => item.currency && item.currency !== 'JPY' && typeof item.originalAmount === 'number'
+      );
+      const fxNotice = document.getElementById('fxNoticeBanner');
+      if (fxNotice) {
+        fxNotice.style.display = hasForeignCurrency ? 'block' : 'none';
+      }
+
       if (currentItems.length === 0) {
         itemList.innerHTML = `
           <div class="empty-state">
@@ -738,6 +772,12 @@
           div.id = 'spend-item-' + item.id;
           div.className = 'spend-item-card' + (excludedItemIds.has(item.id) ? ' excluded' : '');
           div.onclick = () => toggleItemExcluded(item.id);
+
+          const isForeign = item.currency && item.currency !== 'JPY' && typeof item.originalAmount === 'number';
+          const originalText = isForeign
+            ? `<div class="spend-item-original">(${item.originalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${escapeHtml(item.currency)})</div>`
+            : '';
+
           div.innerHTML = `
             <div class="spend-item-left">
               <div class="spend-item-meta">
@@ -748,6 +788,7 @@
             </div>
             <div class="spend-item-right">
               <div class="spend-item-amount">¥${item.amount.toLocaleString()}</div>
+              ${originalText}
             </div>
           `;
           itemList.appendChild(div);
